@@ -1224,6 +1224,77 @@ inp_key();
 		}
 	}
 
+	// If a GBA file was passed as a command-line argument, load it directly
+	// into PSRAM and boot it, bypassing the file browser entirely.
+	if (__system_argv->argvMagic == ARGV_MAGIC && __system_argv->argc >= 2) {
+		const char *argPath = __system_argv->argv[1];
+		int argLen = strlen(argPath);
+
+		// Validate: must have a .gba or .GBA extension
+		bool validGBA = (argLen > 4) &&
+			(argPath[argLen - 4] == '.') &&
+			((argPath[argLen - 3] == 'G') || (argPath[argLen - 3] == 'g')) &&
+			((argPath[argLen - 2] == 'B') || (argPath[argLen - 2] == 'b')) &&
+			((argPath[argLen - 1] == 'A') || (argPath[argLen - 1] == 'a'));
+
+		if (validGBA) {
+			// Split the path into directory and filename components
+			char argDir[256];
+			const char *argFile = argPath;
+			int lastSlash = -1;
+
+			for (int i = 0; i < argLen; i++) {
+				if (argPath[i] == '/') lastSlash = i;
+			}
+
+			if (lastSlash >= 0) {
+				// Copy directory including the trailing slash
+				int dirLen = lastSlash + 1;
+				if (dirLen >= (int)sizeof(argDir)) dirLen = sizeof(argDir) - 1;
+				strncpy(argDir, argPath, dirLen);
+				argDir[dirLen] = '\0';
+				argFile = argPath + lastSlash + 1;
+			} else {
+				strcpy(argDir, "/");
+			}
+
+			// Repopulate the file list from the argument's directory
+			strncpy(curpath, argDir, sizeof(curpath) - 1);
+			curpath[sizeof(curpath) - 1] = '\0';
+			FileListGBA();
+
+			// Find the matching entry in fs[] (skip directories and NDS files)
+			int argSel = -1;
+			for (int i = 0; i < numFiles; i++) {
+				int idx = sortfile[i];
+				if (fs[idx].type & S_IFDIR) continue;
+				if (fs[idx].isNDSFile == 1) continue;
+				if (strcmp(fs[idx].filename, argFile) == 0) {
+					argSel = idx;
+					break;
+				}
+			}
+
+			if (argSel >= 0) {
+				// Always use PSRAM for direct launch
+				GBAmode = 0;
+				int ret = writeFileToRam(argSel);
+				if (ret != 0) {
+					if (ret == 2) {
+						err_cnf(9, 10);
+					} else {
+						err_cnf(7, 8);
+					}
+					// Fall through to normal UI on error
+				} else {
+					gbaMode(argSel);
+					// gbaMode() does not return; execution ends here
+				}
+			}
+			// If file not found in list, fall through to normal UI
+		}
+	}
+
 	getGBAmode();
 	if((GBAmode == 2) && !softReset)GBAmode = 0;
 	if(carttype > 2)GBAmode = 0;

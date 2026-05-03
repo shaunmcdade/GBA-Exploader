@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <NDS.h>
+#include <nds.h>
 
 #include "message.h"
 

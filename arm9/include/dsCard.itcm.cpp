@@ -7,7 +7,7 @@
  **************************************************************************************************************/
 #include <stdio.h>
 
-#include "dscard.h"
+#include "dsCard.h"
 #include "string.h"
 #include "io_sc_common.h"
 #include "tonccpy.h"

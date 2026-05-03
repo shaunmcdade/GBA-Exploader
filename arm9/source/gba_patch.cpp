@@ -5,7 +5,7 @@
 
 #include "gba_patch.h"
 #include "GBA_ini.h"
-#include "dscard.h"
+#include "dsCard.h"
 
 #define	PATCH_VER	5
 
